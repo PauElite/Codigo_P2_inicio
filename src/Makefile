@@ -20,7 +20,7 @@ sec: $(C_FILES)
 
 # Regla para ejecutar el programa con MPI, usando el archivo de entrada y parámetros adicionales
 run_sec: sec
-	mpirun -np 1 ./$(EXEC) < ../input/input_500_200_100_50.txt $(N) $(M) $(N_GEN) $(T_POB) $(M_RATE)
+	mpirun -np 4 ./$(EXEC) < ../input/input_500_200_100_50.txt $(N) $(M) $(N_GEN) $(T_POB) $(M_RATE)
 
 # Regla para limpiar el ejecutable generado
 clean:

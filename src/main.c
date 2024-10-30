@@ -3,11 +3,24 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <mpi.h>
+#include <stddef.h>
+#include "../include/mh.h"
 
 #include "../include/io.h"
 #define TIME 1
 
 extern double aplicar_mh(const double *, int, int, int, int, double, int *);
+void crear_tipo_datos(int m, MPI_Datatype *individuo_type) {
+    int blocklen[2] = {m, 1};
+    MPI_Datatype dtype[2] = { MPI_INT, MPI_DOUBLE };
+    
+    MPI_Aint disp[2];
+    disp[0] = offsetof(Individuo, array_int);
+    disp[1] = offsetof(Individuo, fitness);
+    
+    MPI_Type_create_struct(2, blocklen, disp, dtype, individuo_type); 
+    MPI_Type_commit(individuo_type);
+}
 
 static double mseconds()
 {
@@ -61,6 +74,7 @@ int main(int argc, char **argv)
     MPI_Bcast(&m_rate, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     // printf("\nSoy el proceso %d y estos son mis datos: n=%d\tm=%d\tn_gen=%d\ttam_pob=%d\tm_rate=%.2lf\n", rank, n, m, n_gen, tam_pob, m_rate);
 
+
     double *d = NULL;
     if (rank == 0)
     {
@@ -72,6 +86,52 @@ int main(int argc, char **argv)
     }
 
     MPI_Bcast(d, (n * n - n) / 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // Crear tipo de datos MPI para Individuo
+    MPI_Datatype individuo_type;
+    crear_tipo_datos(m, &individuo_type);
+
+    // Inicializar población local
+    int tam_pob_local = tam_pob / size;
+    int resto = tam_pob % size;
+    if (rank < resto)
+    {
+        tam_pob_local++; // Distribuir el resto de manera equitativa entre los primeros procesos
+    }
+    Individuo *poblacion_total = NULL;
+    if (rank == 0)
+    {
+        poblacion_total = (Individuo *)malloc(tam_pob * sizeof(Individuo));
+        for (int i = 0; i < tam_pob; i++)
+        {
+            crear_individuo(n, m, &poblacion_total[i]);
+        }
+    }
+
+    Individuo *poblacion = (Individuo *)malloc(tam_pob_local * sizeof(Individuo));
+    int *elementosADifundir = (int *)malloc(size * sizeof(int));
+    int *posicionesIniciales = (int *)malloc(size * sizeof(int));
+    int desplazamiento = 0;
+    for (int i = 0; i < size; i++)
+    {
+        elementosADifundir[i] = (tam_pob / size) + (i < resto ? 1 : 0);
+        posicionesIniciales[i] = desplazamiento;
+        desplazamiento += elementosADifundir[i];
+    }
+
+    MPI_Scatterv(poblacion_total, elementosADifundir, posicionesIniciales, individuo_type, poblacion, tam_pob_local, individuo_type, 0, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    for (int i = 0; i < tam_pob_local; i++) {
+        printf("Proceso %d: %d\t%d\t%d\t%d con fitness %.2lf\n", rank, poblacion[i].array_int[0], poblacion[i].array_int[2], poblacion[i].array_int[3], poblacion[i].array_int[4], poblacion[i].fitness);
+    }
+
+    if (rank == 0)
+    {
+        free(poblacion_total);
+    }
+    free(elementosADifundir);
+    free(posicionesIniciales);
+
     // Allocate memory for output data
     int *sol = (int *)malloc(m * sizeof(int));
 
@@ -81,12 +141,11 @@ int main(int argc, char **argv)
 #endif
 
     // Call Metaheuristic
-    double value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);
-    
+    //double value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);
 
     // Gather results at root process
     double global_value;
-    MPI_Reduce(&value, &global_value, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    //MPI_Reduce(&value, &global_value, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0)
     {
@@ -100,7 +159,9 @@ int main(int argc, char **argv)
     // Free Allocated Memory
     free(sol);
     free(d);
+    free(poblacion);
 
+    MPI_Type_free(&individuo_type);
     MPI_Finalize(); // Finalizar entorno MPI
 
     return (EXIT_SUCCESS);

@@ -81,11 +81,8 @@ int main(int argc, char **argv)
 #endif
 
     // Call Metaheuristic
-    double value;
-    if (rank != 0)
-    {
-        // value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);
-    }
+    double value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);
+    
 
     // Gather results at root process
     double global_value;

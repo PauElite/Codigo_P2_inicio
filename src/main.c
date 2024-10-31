@@ -10,6 +10,9 @@
 #define TIME 1
 
 extern double aplicar_mh(const double *, int, int, int, int, double, int *);
+int aleatorio(int n);
+int find_element(int *array, int end, int element);
+void crear_individuo(int n, int m, Individuo *individuo);
 void crear_tipo_datos(int m, MPI_Datatype *individuo_type) {
     int blocklen[2] = {m, 1};
     MPI_Datatype dtype[2] = { MPI_INT, MPI_DOUBLE };
@@ -121,10 +124,6 @@ int main(int argc, char **argv)
     MPI_Scatterv(poblacion_total, elementosADifundir, posicionesIniciales, individuo_type, poblacion, tam_pob_local, individuo_type, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    for (int i = 0; i < tam_pob_local; i++) {
-        printf("Proceso %d: %d\t%d\t%d\t%d con fitness %.2lf\n", rank, poblacion[i].array_int[0], poblacion[i].array_int[2], poblacion[i].array_int[3], poblacion[i].array_int[4], poblacion[i].fitness);
-    }
-
     if (rank == 0)
     {
         free(poblacion_total);
@@ -144,7 +143,7 @@ int main(int argc, char **argv)
     //double value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);
 
     // Gather results at root process
-    double global_value;
+    double global_value = 0.0;
     //MPI_Reduce(&value, &global_value, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0)

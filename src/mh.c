@@ -59,31 +59,6 @@ int comp_array_int(const void *a, const void *b)
     return (*(int *)a - *(int *)b);
 }
 
-/*int comp_fitness(const void *a, const void *b)
-{
-    Individuo *individuoA = (Individuo *)a;
-    Individuo *individuoB = (Individuo *)b;
-    if (prueba == 0){
-        for(int z = 0; z < 200; z++){
-            printf("%d ", individuoA->array_int[z]);
-        }
-        printf("%.2lf\n", individuoA->fitness);
-        for(int z = 0; z < 200; z++){
-            printf("%d ", individuoB->array_int[z]);
-        }
-        printf("%.2lf\n", individuoB->fitness);
-        prueba = 2;
-    }
-    
-    if (prueba < 2) {
-        printf("%.2lf - %.2lf = %.2lf", individuoA->fitness, individuoB->fitness, individuoA->fitness - individuoB->fitness);
-        printf("\n");
-    }
-    return individuoA->fitness - individuoB->fitness;
-    // qsort pasa un puntero al elemento que está ordenando
-    //return (*(Individuo **)b)->fitness - (*(Individuo **)a)->fitness;
-}*/
-
 int comp_fitness(const void *a, const void *b)
 {
     // Cast a los tipos adecuados
@@ -95,6 +70,22 @@ int comp_fitness(const void *a, const void *b)
         return 1;
     } else if (individuoB->fitness < individuoA->fitness) {
         return -1;
+    } else {
+        return 0;
+    }
+}
+
+int comp_fitness_menorAMayor(const void *a, const void *b)
+{
+    // Cast a los tipos adecuados
+    Individuo *individuoA = (Individuo *)a;
+    Individuo *individuoB = (Individuo *)b;
+
+    // Comparar de mayor a menor (descendente)
+    if (individuoB->fitness > individuoA->fitness) {
+        return -1;
+    } else if (individuoB->fitness < individuoA->fitness) {
+        return 1;
     } else {
         return 0;
     }

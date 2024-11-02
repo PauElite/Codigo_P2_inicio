@@ -18,38 +18,42 @@ int find_element(int *array, int end, int element);
 void crear_individuo(int n, int m, Individuo *individuo);
 int comp_fitness(const void *a, const void *b);
 int comp_fitness_menorAMayor(const void *a, const void *b);
-void crear_tipo_datos(int m, MPI_Datatype *individuo_type) {
+void crear_tipo_datos(int m, MPI_Datatype *individuo_type)
+{
     int blocklen[2] = {m, 1};
-    MPI_Datatype dtype[2] = { MPI_INT, MPI_DOUBLE };
-    
+    MPI_Datatype dtype[2] = {MPI_INT, MPI_DOUBLE};
+
     MPI_Aint disp[2];
     disp[0] = offsetof(Individuo, array_int);
     disp[1] = offsetof(Individuo, fitness);
-    
-    MPI_Type_create_struct(2, blocklen, disp, dtype, individuo_type); 
+
+    MPI_Type_create_struct(2, blocklen, disp, dtype, individuo_type);
     MPI_Type_commit(individuo_type);
 }
 
-void realizarMigracion(MPI_Datatype individuo_type, Individuo *poblacion, int tam_pob, int rank, int size){
+void realizarMigracion(MPI_Datatype individuo_type, Individuo *poblacion, int tam_pob, int rank, int size)
+{
     // Cada subpoblación se encuentra ya ordenada por el valor fitness
-    Individuo *mejoresIndividuos = (Individuo*)malloc(NEM * sizeof(Individuo));
-    for (int i = 0; i < NEM; i++){
+    Individuo *mejoresIndividuos = (Individuo *)malloc(NEM * sizeof(Individuo));
+    for (int i = 0; i < NEM; i++)
+    {
         mejoresIndividuos[i] = poblacion[i];
     }
-    
+
     Individuo *mejoresIndividuos_total = NULL;
-    if (rank == 0){
+    if (rank == 0)
+    {
         mejoresIndividuos_total = (Individuo *)malloc(size * NEM * sizeof(Individuo));
     }
-    
+
     MPI_Gather(mejoresIndividuos, NEM, individuo_type, mejoresIndividuos_total, NEM, individuo_type, 0, MPI_COMM_WORLD);
-    
+
     free(mejoresIndividuos);
-    if (rank == 0){
+    if (rank == 0)
+    {
         qsort(mejoresIndividuos_total, size * NEM, sizeof(Individuo), comp_fitness);
     }
     qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness_menorAMayor); // ordeno de menor a mayor para sustituir los peores individuos
-    MPI_Barrier(MPI_COMM_WORLD);
 
     MPI_Scatter(mejoresIndividuos_total, NEM, individuo_type, poblacion, NEM, individuo_type, 0, MPI_COMM_WORLD);
     qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness);
@@ -99,14 +103,11 @@ int main(int argc, char **argv)
         // Generate matrix D with distance values among elements
         // double *d = read_distances(n);
     }
-    // printf("\nSoy el proceso %d y estos son mis datos: n=%d\tm=%d\tn_gen=%d\ttam_pob=%d\tm_rate=%.2lf", rank, n, m, n_gen, tam_pob, m_rate);
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&n_gen, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&tam_pob, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&m_rate, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // printf("\nSoy el proceso %d y estos son mis datos: n=%d\tm=%d\tn_gen=%d\ttam_pob=%d\tm_rate=%.2lf\n", rank, n, m, n_gen, tam_pob, m_rate);
-
 
     double *d = NULL;
     if (rank == 0)
@@ -162,10 +163,12 @@ int main(int argc, char **argv)
     double ti = mseconds();
 #endif
     int ngm = 0;
-    for (int g = 0; g < n_gen; g++){
+    for (int g = 0; g < n_gen; g++)
+    {
         aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion, rank);
         ngm++;
-        if (ngm == NGM){
+        if (ngm == NGM)
+        {
             realizarMigracion(individuo_type, poblacion, elementosADifundir[rank], rank, size);
             ngm = 0;
         }

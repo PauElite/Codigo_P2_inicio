@@ -9,7 +9,7 @@
 #include "../include/mh.h"
 
 #define MUTATION_RATE 0.15
-#define PRINT 1
+#define PRINT 0
 int prueba = 0;
 
 int aleatorio(int n)

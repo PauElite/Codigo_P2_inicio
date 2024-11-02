@@ -9,7 +9,7 @@
 #include "../include/io.h"
 #define TIME 1
 
-extern double aplicar_mh(const double *, int, int, int, int, double, int *);
+extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion);
 int aleatorio(int n);
 int find_element(int *array, int end, int element);
 void crear_individuo(int n, int m, Individuo *individuo);
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
     {
         free(poblacion_total);
     }
-    free(elementosADifundir);
+    //free(elementosADifundir);
     free(posicionesIniciales);
 
     // Allocate memory for output data
@@ -138,6 +138,10 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);
     double ti = mseconds();
 #endif
+    
+    for (int g = 0; g < n_gen; g++){
+        if (rank == 0) aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion);
+    }
 
     // Call Metaheuristic
     //double value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);

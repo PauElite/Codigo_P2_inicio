@@ -12,7 +12,7 @@
 #define NEM 10
 int pruebaA = 1;
 
-extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion);
+extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion, int rank);
 int aleatorio(int n);
 int find_element(int *array, int end, int element);
 void crear_individuo(int n, int m, Individuo *individuo);
@@ -163,17 +163,17 @@ int main(int argc, char **argv)
 #endif
     int ngm = 0;
     for (int g = 0; g < n_gen; g++){
-        aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion);
+        aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion, rank);
         ngm++;
         if (ngm == NGM){
             realizarMigracion(individuo_type, poblacion, elementosADifundir[rank], rank, size);
+            ngm = 0;
         }
     }
 
-
     // Gather results at root process
     double global_value = 0.0;
-    //MPI_Reduce(&value, &global_value, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&poblacion->fitness, &global_value, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0)
     {

@@ -91,7 +91,7 @@ int comp_fitness_menorAMayor(const void *a, const void *b)
     }
 }
 
-void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion)
+void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion, int rank)
 {
     // para reiniciar la secuencia pseudoaleatoria en cada ejecución
     srand(time(NULL) + getpid());
@@ -122,7 +122,7 @@ void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate
     qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness);
     if (PRINT)
     {
-        printf("Generacion %d - ", g);
+        printf("Proc: %d - Generacion %d - ", rank, g);
         printf("Fitness = %.0lf\n", poblacion[0].fitness);
     }
     // ordena el array solucion

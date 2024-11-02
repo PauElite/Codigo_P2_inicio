@@ -41,21 +41,49 @@ void realizarMigracion(MPI_Datatype individuo_type, Individuo *poblacion, int ta
     }
 
     Individuo *mejoresIndividuos_total = NULL;
+    MPI_Status status;
+
     if (rank == 0)
-    {
+    { //El proceso maestro recoge los mejores individuos de cada proceso, ordenándolos
         mejoresIndividuos_total = (Individuo *)malloc(size * NEM * sizeof(Individuo));
+
+        for (int i = 1; i < size; i++){
+            MPI_Recv(&mejoresIndividuos_total[i * NEM], NEM, individuo_type, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+        }
+
+        for (int i = 0; i < NEM; i++){
+            mejoresIndividuos_total[i] = mejoresIndividuos[i];
+        }
+
+        //Ordenar los mejores individuos ya juntos de todos los procesos
+        qsort(mejoresIndividuos_total, size * NEM, sizeof(Individuo), comp_fitness);
+    } else{ //El resto de procesos envían sus mejores individuos
+        MPI_Ssend(mejoresIndividuos, NEM, individuo_type, 0, 0, MPI_COMM_WORLD);
     }
 
-    MPI_Gather(mejoresIndividuos, NEM, individuo_type, mejoresIndividuos_total, NEM, individuo_type, 0, MPI_COMM_WORLD);
+    //MPI_Gather(mejoresIndividuos, NEM, individuo_type, mejoresIndividuos_total, NEM, individuo_type, 0, MPI_COMM_WORLD);
 
     free(mejoresIndividuos);
+    
     if (rank == 0)
     {
-        qsort(mejoresIndividuos_total, size * NEM, sizeof(Individuo), comp_fitness);
-    }
-    qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness_menorAMayor); // ordeno de menor a mayor para sustituir los peores individuos
+        for (int i = 1; i < size; i++){
+            MPI_Ssend(&mejoresIndividuos_total[i * NEM], NEM, individuo_type, i, 0, MPI_COMM_WORLD);
+        }
+        // ordeno de menor a mayor para sustituir los peores individuos
+        qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness_menorAMayor);
+        for (int i = 0; i < NEM; i++){
+            poblacion[i] = mejoresIndividuos_total[i];
+        }
 
-    MPI_Scatter(mejoresIndividuos_total, NEM, individuo_type, poblacion, NEM, individuo_type, 0, MPI_COMM_WORLD);
+    } else{
+        // ordeno de menor a mayor para sustituir los peores individuos
+        qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness_menorAMayor);
+        MPI_Recv(poblacion, NEM, individuo_type, 0, 0, MPI_COMM_WORLD, &status);
+    }
+
+    //MPI_Scatter(mejoresIndividuos_total, NEM, individuo_type, poblacion, NEM, individuo_type, 0, MPI_COMM_WORLD);
+    // vuelvo a ordenar, ahora de mayor a menor, con los NEM individuos ya migrados
     qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness);
 }
 

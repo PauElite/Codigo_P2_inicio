@@ -133,15 +133,6 @@ void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate
     {
         printf("Generacion %d - ", g);
         printf("Fitness = %.0lf\n", poblacion[0].fitness);
-        /*if (prueba < 2)
-        {
-            for (int z = 0; z < m; z++)
-            {
-                printf("%d ", poblacion[tam_pob - 1].array_int[z]);
-            }
-            printf("\n\n");
-            prueba++;
-        }*/
     }
     // ordena el array solucion
     // qsort(poblacion[0].array_int, m, sizeof(int), comp_array_int);

@@ -8,6 +8,8 @@
 
 #include "../include/io.h"
 #define TIME 1
+#define NGM 20
+#define NEM 10
 
 extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion);
 int aleatorio(int n);
@@ -140,11 +142,9 @@ int main(int argc, char **argv)
 #endif
     
     for (int g = 0; g < n_gen; g++){
-        if (rank == 0) aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion);
+        aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion);
     }
 
-    // Call Metaheuristic
-    //double value = aplicar_mh(d, n, m, n_gen, tam_pob / size, m_rate, sol);
 
     // Gather results at root process
     double global_value = 0.0;

@@ -10,7 +10,6 @@
 #include "../include/io.h"
 #define TIME 1
 #define NGM 20
-int NEM = 5;
 
 extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion, int rank);
 int aleatorio(int n);
@@ -151,7 +150,7 @@ int main(int argc, char **argv)
         posicionesIniciales[i] = desplazamiento;
         desplazamiento += elementosADifundir[i];
     }
-    NEM = tam_pob / size / 2;
+    int NEM = tam_pob / size / 2;
 
     MPI_Scatterv(poblacion_total, elementosADifundir, posicionesIniciales, individuo_type, poblacion, tam_pob_local, individuo_type, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);

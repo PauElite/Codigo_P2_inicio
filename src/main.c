@@ -41,82 +41,72 @@ void realizarMigracion(MPI_Datatype individuo_type, Individuo *poblacion, int ta
         mejoresIndividuos[i] = poblacion[i];
     }
 
-    int pack_size = 0;
+    MPI_Request send_request, *recv_requests;
+    Individuo *mejoresIndividuos_total = NULL;
 
-    // Calcular el tamaño necesario del buffer para empaquetar los NEM individuos
-    MPI_Pack_size(NEM * MAX_ARRAY_INT, MPI_INT, MPI_COMM_WORLD, &pack_size);
-    int fitness_size = 0;
-    MPI_Pack_size(NEM, MPI_DOUBLE, MPI_COMM_WORLD, &fitness_size);
-    pack_size += fitness_size;
+    if (rank == 0)
+    {
+        mejoresIndividuos_total = (Individuo *)malloc(size * NEM * sizeof(Individuo));
+        recv_requests = (MPI_Request *)malloc(size * sizeof(MPI_Request));
 
-    // Crear el buffer de empaquetado
-    char *buffer = (char *)malloc(pack_size);
+        // El proceso maestro inicia recepciones asíncronas de los mejores individuos desde cada proceso
+        for (int i = 1; i < size; i++)
+        {
+            MPI_Irecv(&mejoresIndividuos_total[i * NEM], NEM, individuo_type, i, 0, MPI_COMM_WORLD, &recv_requests[i]);
+        }
 
-    // Empaquetar los datos de los mejores individuos
-    int position = 0;
-    for (int i = 0; i < NEM; i++){
-        MPI_Pack(mejoresIndividuos[i].array_int, MAX_ARRAY_INT, MPI_INT, buffer, pack_size, &position, MPI_COMM_WORLD);
-        MPI_Pack(&mejoresIndividuos[i].fitness, 1, MPI_DOUBLE, buffer, pack_size, &position, MPI_COMM_WORLD);
+        // Maestro guarda sus propios mejores individuos directamente
+        for (int i = 0; i < NEM; i++)
+        {
+            mejoresIndividuos_total[i] = mejoresIndividuos[i];
+        }
+    }
+    else
+    {
+        // Cada proceso envía sus mejores individuos al maestro asíncronamente
+        MPI_Isend(mejoresIndividuos, NEM, individuo_type, 0, 0, MPI_COMM_WORLD, &send_request);
     }
 
-    if (rank == 0){
-        char *recibidos_buffer = (char *)malloc(size * pack_size);
-        MPI_Status status;
-
-        // Recibir los buffer empaquetados del resto de procesos
-        memcpy(&recibidos_buffer[0], buffer, pack_size);
-        for (int i = 1; i < size; i++){
-            MPI_Recv(&recibidos_buffer[i * pack_size], pack_size, MPI_PACKED, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+    if (rank == 0)
+    {
+        for (int i = 1; i < size; i++)
+        {
+            // El proceso maestro espera a recibir los mejores individuos del resto de procesos
+            MPI_Wait(&recv_requests[i], MPI_STATUS_IGNORE);
         }
 
-        // Desempaquetar los datos
-        Individuo *mejoresIndividuos_total = (Individuo *)malloc(size * NEM * sizeof(Individuo));
-        position = 0;
-        for (int i = 0; i < size * NEM; i++) {
-            MPI_Unpack(recibidos_buffer, size * pack_size, &position, mejoresIndividuos_total[i].array_int, MAX_ARRAY_INT, MPI_INT, MPI_COMM_WORLD);
-            MPI_Unpack(recibidos_buffer, size * pack_size, &position, &mejoresIndividuos_total[i].fitness, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        }
-
-        // Ordenar los individuos para mantener los mejores
+        // Ordenar todos los individuos recibidos para tener, a su vez, los mejores
         qsort(mejoresIndividuos_total, size * NEM, sizeof(Individuo), comp_fitness);
 
-        // Redistribuir los mejores individuos
-        position = 0;
-        for (int i = 0; i < NEM; i++) {
-            MPI_Pack(mejoresIndividuos_total[i].array_int, MAX_ARRAY_INT, MPI_INT, buffer, pack_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(&mejoresIndividuos_total[i].fitness, 1, MPI_DOUBLE, buffer, pack_size, &position, MPI_COMM_WORLD);
+        // Enviar los mejores individuos de nuevo a los procesos
+        for (int i = 1; i < size; i++)
+        {
+            MPI_Isend(&mejoresIndividuos_total[i * NEM], NEM, individuo_type, i, 0, MPI_COMM_WORLD, &send_request);
         }
 
-        // Enviar a los demás procesos
-        for (int i = 1; i < size; i++) {
-            MPI_Ssend(buffer, pack_size, MPI_PACKED, i, 0, MPI_COMM_WORLD);
-        }
-
-        // El proceso maestro aplica sus propios mejores individuos a su población
-        position = 0;
-        for (int i = 0; i < NEM; i++) {
-            MPI_Unpack(buffer, pack_size, &position, poblacion[i].array_int, MAX_ARRAY_INT, MPI_INT, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, pack_size, &position, &poblacion[i].fitness, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        }
-
-        free(mejoresIndividuos_total);
-        free(recibidos_buffer);
-    } else {
-        // Enviar buffer empaquetado al maestro
-        MPI_Ssend(buffer, pack_size, MPI_PACKED, 0, 0, MPI_COMM_WORLD);
-
-        // Recibir los mejores individuos nuevamente desde el maestro
-        MPI_Recv(buffer, pack_size, MPI_PACKED, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        // Desempaquetar y reemplazar los peores individuos
-        position = 0;
-        for (int i = 0; i < NEM; i++) {
-            MPI_Unpack(buffer, pack_size, &position, poblacion[i].array_int, MAX_ARRAY_INT, MPI_INT, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, pack_size, &position, &poblacion[i].fitness, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        // El proceso maestro también integra sus propios mejores individuos
+        for (int i = 0; i < NEM; i++)
+        {
+            poblacion[i] = mejoresIndividuos_total[i];
         }
     }
-    free(buffer);
-    
+    else
+    {
+        // Cada proceso recibe los mejores individuos de vuelta del proceso maestro
+        MPI_Irecv(poblacion, NEM, individuo_type, 0, 0, MPI_COMM_WORLD, &send_request);
+
+        // Esperar a que la recepción se complete antes de poder usar los datos
+        MPI_Wait(&send_request, MPI_STATUS_IGNORE);
+    }
+
+    // Liberar memoria
+    free(mejoresIndividuos);
+    if (rank == 0)
+    {
+        free(mejoresIndividuos_total);
+        free(recv_requests);
+    }
+
     // Ordenar la población de mayor a menor
     qsort(poblacion, tam_pob, sizeof(Individuo), comp_fitness);
 }

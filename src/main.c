@@ -8,9 +8,8 @@
 
 #include "../include/io.h"
 #define TIME 1
-#define NGM 20
-#define NEM 10
-int pruebaA = 1;
+#define NGM 60
+int NEM = 5;
 
 extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion, int rank);
 int aleatorio(int n);
@@ -180,6 +179,7 @@ int main(int argc, char **argv)
         desplazamiento += elementosADifundir[i];
     }
 
+    NEM = elementosADifundir[0] / 2;
     MPI_Scatterv(poblacion_total, elementosADifundir, posicionesIniciales, individuo_type, poblacion, tam_pob_local, individuo_type, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 

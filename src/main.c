@@ -10,8 +10,7 @@
 #include "../include/io.h"
 #define TIME 1
 #define NGM 20
-#define NEM 10
-int pruebaA = 1;
+int NEM = 5;
 
 extern void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate, Individuo *poblacion, int rank);
 int aleatorio(int n);
@@ -32,7 +31,7 @@ void crear_tipo_datos(int m, MPI_Datatype *individuo_type)
     MPI_Type_commit(individuo_type);
 }
 
-void realizarMigracion(MPI_Datatype individuo_type, Individuo *poblacion, int tam_pob, int rank, int size)
+void realizarMigracion(MPI_Datatype individuo_type, Individuo *poblacion, int tam_pob, int rank, int size, int NEM)
 {
     // Cada subpoblación se encuentra ya ordenada por el valor fitness
     Individuo *mejoresIndividuos = (Individuo *)malloc(NEM * sizeof(Individuo));
@@ -152,6 +151,7 @@ int main(int argc, char **argv)
         posicionesIniciales[i] = desplazamiento;
         desplazamiento += elementosADifundir[i];
     }
+    NEM = tam_pob / size / 2;
 
     MPI_Scatterv(poblacion_total, elementosADifundir, posicionesIniciales, individuo_type, poblacion, tam_pob_local, individuo_type, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         ngm++;
         if (ngm == NGM)
         {
-            realizarMigracion(individuo_type, poblacion, elementosADifundir[rank], rank, size);
+            realizarMigracion(individuo_type, poblacion, elementosADifundir[rank], rank, size, NEM);
             ngm = 0;
         }
     }

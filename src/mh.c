@@ -125,8 +125,6 @@ void aplicar_mh(const double *d, int n, int m, int g, int tam_pob, double m_rate
         printf("Proc: %d - Generacion %d - ", rank, g);
         printf("Fitness = %.0lf\n", poblacion[0].fitness);
     }
-    // ordena el array solucion
-    // qsort(poblacion[0].array_int, m, sizeof(int), comp_array_int);
 }
 
 void cruzar(Individuo *padre1, Individuo *padre2, Individuo *hijo1, Individuo *hijo2, int n, int m)

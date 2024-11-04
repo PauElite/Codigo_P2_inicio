@@ -98,9 +98,6 @@ int main(int argc, char **argv)
 
         // Check that 'm' is less than 'n'
         assert(m < n);
-
-        // Generate matrix D with distance values among elements
-        // double *d = read_distances(n);
     }
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -165,16 +162,18 @@ int main(int argc, char **argv)
     int ngm = 0;
     for (int g = 0; g < n_gen; g++)
     {
+        // Cada proceso evoluciona su subpoblación
         aplicar_mh(d, n, m, g, elementosADifundir[rank], m_rate, poblacion, rank);
         ngm++;
         if (ngm == NGM)
-        {
+        {   
+            // Al llegar a NGM evoluciones, se realiza la migración de los mejores NEM individuos y se resetea el contador NGM
             realizarMigracion(individuo_type, poblacion, elementosADifundir[rank], rank, size, NEM);
             ngm = 0;
         }
     }
 
-    // Gather results at root process
+    // Nos quedamos con el mejor valor fitness de entre los calculados por cada proceso
     double global_value = 0.0;
     MPI_Reduce(&poblacion->fitness, &global_value, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
